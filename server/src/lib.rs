@@ -63,3 +63,26 @@ impl HashTable {
     }
 
 }
+
+// Unit tests for the hash table
+#[test]
+fn test_hash_table() {
+    let mut hash_table = HashTable::new(10);
+    hash_table.insert("key1", "value1");
+    assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
+}
+
+#[test]
+fn test_hash_table_delete() {
+    let mut hash_table = HashTable::new(10);
+    hash_table.insert("key1", "value1");
+    hash_table.delete("key1");
+    assert_eq!(hash_table.get("key1"), None);
+}
+
+#[test]
+fn test_hash_table_insert() {
+    let mut hash_table = HashTable::new(10);
+    hash_table.insert("key1", "value1");
+    assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
+}
