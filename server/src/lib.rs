@@ -1,4 +1,11 @@
 use std::collections::LinkedList;
+use std::sync::RwLock;
+
+enum Operation {
+    GET,
+    INSERT,
+    DELETE,
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct HashCell {
@@ -7,15 +14,15 @@ struct HashCell {
 }
 
 struct HashTable {
-    buckets: Vec<LinkedList<HashCell>>,
+    buckets: Vec<RwLock<LinkedList<HashCell>>>,
     size: usize,
 }
 
 impl HashTable {
     fn new(size: usize) -> Self {
         HashTable {
-            buckets: vec![LinkedList::new(); size],
-            size: size,
+            buckets: (0..size).map(|_| RwLock::new(LinkedList::new())).collect(),
+            size,
         }
     }
 
@@ -29,23 +36,28 @@ impl HashTable {
 
     fn insert(&mut self, key: &str, value: &str) {
         let index = self.hash(&key);
-        self.buckets[index].push_back(HashCell { key: key.to_string(), value: value.to_string() });
+        let mut bucket = self.buckets[index].write().unwrap();
+        bucket.push_back(HashCell { key: key.to_string(), value: value.to_string() });
     }
 
-    fn get(&self, key: &str) -> Option<&String> {
+    fn get(&self, key: &str) -> Option<String> {
         let index = self.hash(&key);
-        for cell in self.buckets[index].iter() {
+        // Get a read lock on the bucket
+        let bucket = self.buckets[index].read().unwrap();
+        for cell in bucket.iter() {
             if cell.key == key {
-                return Some(&cell.value);
+                let value = cell.value.clone();
+                return Some(value);
             }
         }
+
         None
     }
 
     fn delete(&mut self, key: &str) {
         let index = self.hash(&key);
         // get position of the cell
-        let mut bucket = &mut self.buckets[index];
+        let mut bucket = self.buckets[index].write().unwrap();
         for (position, cell) in bucket.iter().enumerate() {
             println!("cell: {:?}", cell);
             if cell.key == key {
@@ -69,7 +81,9 @@ impl HashTable {
 fn test_hash_table() {
     let mut hash_table = HashTable::new(10);
     hash_table.insert("key1", "value1");
+    hash_table.insert("key2", "value2");
     assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
+    assert_eq!(hash_table.get("key2").unwrap().as_str(), "value2");
 }
 
 #[test]
