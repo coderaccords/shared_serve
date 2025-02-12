@@ -37,6 +37,13 @@ impl HashTable {
     fn insert(&mut self, key: &str, value: &str) {
         let index = self.hash(&key);
         let mut bucket = self.buckets[index].write().unwrap();
+        
+        for cell in bucket.iter_mut() {
+            if cell.key == key {
+                cell.value = value.to_string();
+                return;
+            }
+        }
         bucket.push_back(HashCell { key: key.to_string(), value: value.to_string() });
     }
 
@@ -82,7 +89,8 @@ fn test_hash_table() {
     let mut hash_table = HashTable::new(10);
     hash_table.insert("key1", "value1");
     hash_table.insert("key2", "value2");
-    assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
+    hash_table.insert("key1", "value3");
+    assert_eq!(hash_table.get("key1").unwrap().as_str(), "value3");
     assert_eq!(hash_table.get("key2").unwrap().as_str(), "value2");
 }
 
