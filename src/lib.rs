@@ -4,15 +4,15 @@ use std::fmt;
 
 #[repr(C)]
 pub struct Header {
-    pub read_index: usize,
-    pub write_index: usize,
+    pub read_index: RwLock<usize>,
+    pub write_index: RwLock<usize>,
 }
 
 impl Header {
     pub fn new() -> Self {
         Header {
-            read_index: 0,
-            write_index: 0,
+            read_index: RwLock::new(0),
+            write_index: RwLock::new(0),
         }
     }
 }
