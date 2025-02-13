@@ -34,33 +34,31 @@ fn add_request(ptr: *mut u8, request: Request) -> Result<(), Box<dyn Error>> {
 
         loop {
             // Try to acquire write lock
-            let write_result = header.write_index.try_write();
-            if write_result.is_err() {
+            let write_index_result = header.write_index.try_write();
+            if write_index_result.is_err() {
                 println!("Client: Waiting for write lock on write index");
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 continue;
             }
-            let mut write_guard = write_result.unwrap();
+            let mut write_index_guard = write_index_result.unwrap();
 
             // Try to acquire read lock
-            let read_result = header.read_index.try_read();
-            if read_result.is_err() {
+            let read_index_result = header.read_index.try_read();
+            if read_index_result.is_err() {
                 println!("Client: Waiting for read lock on read index");
                 std::thread::sleep(std::time::Duration::from_millis(100));
-                // write_guard is dropped here automatically
                 continue;
             }
-            let read_guard = read_result.unwrap();
-
-            let next_write = (*write_guard + 1) % CAPACITY;
+            let read_index_guard = read_index_result.unwrap();
+            let next_write = (*write_index_guard + 1) % CAPACITY;
             
-            if next_write == *read_guard {
+            if next_write == *read_index_guard {
                 return Err("Client: Queue is full".into());
             }
 
             // Calculate where to write the new request
             let requests_ptr = (ptr as *mut u8).add(size_of::<Header>());
-            let request_slot = requests_ptr.add(*write_guard * size_of::<Request>());
+            let request_slot = requests_ptr.add(*write_index_guard * size_of::<Request>());
             
             // Write the request
             std::ptr::copy_nonoverlapping(
@@ -69,9 +67,10 @@ fn add_request(ptr: *mut u8, request: Request) -> Result<(), Box<dyn Error>> {
                 size_of::<Request>()
             );
 
-            println!("Client: Inserted request at position {} - {}", *write_guard, request);
+            println!("Client: Inserted request at position {} - {}", next_write, request);
             
-            *write_guard = next_write;
+            *write_index_guard = next_write;
+
             return Ok(());
         }
     }

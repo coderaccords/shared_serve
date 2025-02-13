@@ -55,27 +55,22 @@ pub fn get_request(ptr: *mut u8) -> Result<Request, Box<dyn Error>> {
         let header = &mut *header_ptr;
         loop {
             
-            // Try to acquire write lock
-            let write_result = header.write_index.try_read();
-            if write_result.is_err() {
-                // println!("Server: Waiting for read lock on write index");
+            // Try to acquire read lock
+            let write_index_result = header.write_index.try_read();
+            if write_index_result.is_err() {
                 continue;
             }
-            let write_guard = write_result.unwrap();
+            let write_guard = write_index_result.unwrap();
             let write_index = *write_guard;
 
-            // Try to acquire read lock
-            let read_result = header.read_index.try_write();
-            if read_result.is_err() {
-                // println!("Server: Waiting for write lock on read index");
-                // write_guard is dropped here automatically
+            // Try to acquire write lock
+            let read_index_result = header.read_index.try_write();
+            if read_index_result.is_err() {
                 continue;
             }
-            let mut read_guard = read_result.unwrap();
-            let read_index = *read_guard;
-            
-            // println!("Server: Read index: {}", read_index);
-            // println!("Server: Write index: {}", write_index);
+            let mut read_index_guard = read_index_result.unwrap();
+            let read_index = *read_index_guard;
+           
             if read_index == write_index {
                 return Err("Server: Queue is empty".into());
             }
@@ -88,7 +83,7 @@ pub fn get_request(ptr: *mut u8) -> Result<Request, Box<dyn Error>> {
             let request = ptr::read(request_slot);
             
             // Update read index
-            *read_guard = (read_index + 1) % CAPACITY;
+            *read_index_guard = (read_index + 1) % CAPACITY;
 
             println!("Server: Inserted request at position {} - {}", *write_guard, request);
             return Ok(request);
