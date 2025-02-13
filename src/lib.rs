@@ -17,6 +17,8 @@ impl Header {
     }
 }
 
+pub const CAPACITY: usize = 10;
+pub const SHARED_MEMORY_SIZE: usize = std::mem::size_of::<Header>() + std::mem::size_of::<Request>() * CAPACITY;
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone)]
@@ -185,3 +187,4 @@ fn test_hash_table_insert() {
     hash_table.insert("key1", "value1");
     assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
 }
+

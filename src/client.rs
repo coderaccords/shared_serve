@@ -1,5 +1,5 @@
 mod lib;
-use lib::{Operation, Request, Header};
+use lib::{Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
 use nix::sys::{mman, mman::ProtFlags, mman::MapFlags};
 use nix::fcntl::OFlag;
 use nix::sys::stat::Mode;
@@ -7,19 +7,17 @@ use std::error::Error;
 use std::mem::size_of;
 use std::num::NonZero;
 
-const CAPACITY: usize = 10;
-
-fn setup_shared_memory(size_shm: usize) -> Result<*mut u8, Box<dyn Error>> {
+fn setup_shared_memory_client() -> Result<*mut u8, Box<dyn Error>> {
     let shm_fd = mman::shm_open(
         "RequestQueue",
         OFlag::O_RDWR,
-        Mode::S_IRUSR | Mode::S_IWUSR,
+        Mode::empty(),
     )?;
 
     let ptr = unsafe { 
         mman::mmap(
             None, 
-            NonZero::new(size_shm).unwrap(), 
+            NonZero::new(SHARED_MEMORY_SIZE).unwrap(), 
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE, 
             MapFlags::MAP_SHARED, 
             shm_fd, 
@@ -60,8 +58,7 @@ fn add_request(ptr: *mut u8, request: Request) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let size_shm = size_of::<Header>() + size_of::<Request>() * CAPACITY;
-    let ptr = setup_shared_memory(size_shm)?;
+    let ptr = setup_shared_memory_client()?;
     let request1 = Request::new(Operation::INSERT, "test_key", "test_value");
     let request2 = Request::new(Operation::INSERT, "test_key2", "test_value2");
     let request3 = Request::new(Operation::INSERT, "test_key3", "test_value3");

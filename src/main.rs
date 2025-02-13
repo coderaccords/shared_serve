@@ -1,5 +1,5 @@
 mod lib;
-use lib::{HashTable as HT, Operation, Request, Header};
+use lib::{HashTable as HT, Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
 use clap::Parser;
 use nix::sys::{mman, mman::ProtFlags, mman::MapFlags};
 use nix::fcntl:: OFlag;
@@ -11,15 +11,13 @@ use std::num::NonZero;
 use std::os::fd::AsFd;
 use std::ptr;
 
-const CAPACITY: usize = 10;
-
 #[derive(Parser)]
 struct Args {
-    #[arg(short, long, default_value = "1")]
+    #[arg(short, long, default_value = "10")]
     size: usize,
 }
 
-pub fn setup_shared_memory(size_shm: usize) -> Result<*mut u8, Box<dyn Error>> {
+pub fn setup_shared_memory_server() -> Result<*mut u8, Box<dyn Error>> {
     let shm_fd = mman::shm_open(
         "RequestQueue", 
         OFlag::O_CREAT | OFlag::O_RDWR , 
@@ -27,12 +25,12 @@ pub fn setup_shared_memory(size_shm: usize) -> Result<*mut u8, Box<dyn Error>> {
     
     ftruncate(
         shm_fd.as_fd(), 
-        size_shm as off_t)?;
+        SHARED_MEMORY_SIZE as off_t)?;
     
     let ptr = unsafe { 
         mman::mmap(
             None, 
-            NonZero::new(size_shm).unwrap(), 
+            NonZero::new(SHARED_MEMORY_SIZE).unwrap(), 
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE, 
             MapFlags::MAP_SHARED, 
             shm_fd, 
@@ -72,9 +70,8 @@ pub fn get_request(ptr: *mut u8) -> Result<Request, Box<dyn Error>> {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let hash_table_size = args.size;
-    let size_shm = size_of::<Header>() + size_of::<Request>() * CAPACITY;
     let mut hash_table = HT::new(hash_table_size);
-    let ptr = setup_shared_memory(size_shm)?;
+    let ptr = setup_shared_memory_server()?;
 
     println!("Server started. Waiting for requests...");
     
