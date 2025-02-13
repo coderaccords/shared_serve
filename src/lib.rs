@@ -1,5 +1,5 @@
 use std::collections::LinkedList;
-use std::sync::RwLock;
+use std::sync::{RwLock, Arc};
 use std::fmt;
 
 #[repr(C)]
@@ -92,14 +92,18 @@ struct HashCell {
 }
 
 pub struct HashTable {
-    buckets: Vec<RwLock<LinkedList<HashCell>>>,
+    buckets: Vec<Arc<RwLock<LinkedList<HashCell>>>>,
     size: usize,
 }
 
 impl HashTable {
     pub fn new(size: usize) -> Self {
+        let mut buckets = Vec::with_capacity(size);
+        for _ in 0..size {
+            buckets.push(Arc::new(RwLock::new(LinkedList::new())));
+        }
         HashTable {
-            buckets: (0..size).map(|_| RwLock::new(LinkedList::new())).collect(),
+            buckets,
             size,
         }
     }
@@ -112,8 +116,12 @@ impl HashTable {
         hash % self.size
     }
 
-    pub fn insert(&mut self, key: &str, value: &str) {
-        let index = self.hash(&key);
+    pub fn get_bucket(&self, key: &str) -> usize {
+        self.hash(key)
+    }
+
+    pub fn insert(&self, key: &str, value: &str) {
+        let index = self.get_bucket(&key);
         let mut bucket = self.buckets[index].write().unwrap();
         
         for cell in bucket.iter_mut() {
@@ -126,7 +134,7 @@ impl HashTable {
     }
 
     pub fn get(&self, key: &str) -> Option<String> {
-        let index = self.hash(&key);
+        let index = self.get_bucket(&key);
         // Get a read lock on the bucket
         let bucket = self.buckets[index].read().unwrap();
         for cell in bucket.iter() {
@@ -139,8 +147,8 @@ impl HashTable {
         None
     }
 
-    pub fn delete(&mut self, key: &str)-> bool {
-        let index = self.hash(&key);
+    pub fn delete(&self, key: &str)-> bool {
+        let index = self.get_bucket(&key);
         // get position of the cell
         let mut bucket = self.buckets[index].write().unwrap();
         for (position, cell) in bucket.iter().enumerate() {

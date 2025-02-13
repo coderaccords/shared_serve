@@ -1,5 +1,5 @@
 mod lib;
-use lib::{HashTable as HT, Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
+use lib::{HashTable, Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
 use clap::Parser;
 use nix::sys::{mman, mman::ProtFlags, mman::MapFlags};
 use nix::fcntl:: OFlag;
@@ -10,11 +10,15 @@ use nix::libc::off_t;
 use std::num::NonZero;
 use std::os::fd::AsFd;
 use std::ptr;
+use threadpool::ThreadPool;
+use std::sync::{Arc, Mutex};
 
 #[derive(Parser)]
 struct Args {
     #[arg(short, long, default_value = "10")]
     size: usize,
+    #[arg(short, long, default_value = "4")]
+    num_threads: usize,
 }
 
 pub fn setup_shared_memory_server() -> Result<*mut u8, Box<dyn Error>> {
@@ -67,41 +71,53 @@ pub fn get_request(ptr: *mut u8) -> Result<Request, Box<dyn Error>> {
     }
 }
 
+pub fn process_request(request: Request, hash_table: Arc<HashTable>) -> Result<(), Box<dyn Error>> {
+    println!("Processing request: {}", request);
+    // Process the request based on operation type
+    match request.operation {
+        Operation::INSERT => {
+            println!("Inserting key: {}", request.key_str());
+            hash_table.insert(request.key_str(), request.value_str());
+        },
+        Operation::DELETE => {
+            println!("Deleting key: {}", request.key_str());
+            let result = hash_table.delete(request.key_str());
+            if result {
+                println!("Key deleted successfully");
+            } else {
+                println!("Key not found: {}", request.key_str());
+            }
+        },
+        Operation::GET => {
+            println!("Getting key: {}", request.key_str());
+            match hash_table.get(request.key_str()) {
+                Some(value) => println!("Value: {}", value),
+                None => println!("Key not found: {}", request.key_str()),
+            }
+        },
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let hash_table_size = args.size;
-    let mut hash_table = HT::new(hash_table_size);
+    let thread_count = args.num_threads;
+
+    let hash_table = Arc::new(HashTable::new(hash_table_size));
     let ptr = setup_shared_memory_server()?;
 
-    println!("Server started. Waiting for requests...");
+    let threads = ThreadPool::new(thread_count);
+
+    println!("Server started with {} threads. Waiting for requests...", thread_count);
     
     loop {
         match get_request(ptr) {
             Ok(request) => {
-                println!("Processing request: {}", request);
-                // Process the request based on operation type
-                match request.operation {
-                    Operation::INSERT => {
-                        println!("Inserting key: {}", request.key_str());
-                        hash_table.insert(request.key_str(), request.value_str());
-                    },
-                    Operation::DELETE => {
-                        println!("Deleting key: {}", request.key_str());
-                        let result = hash_table.delete(request.key_str());
-                        if result {
-                            println!("Key deleted successfully");
-                        } else {
-                            println!("Key not found: {}", request.key_str());
-                        }
-                    },
-                    Operation::GET => {
-                        println!("Getting key: {}", request.key_str());
-                        match hash_table.get(request.key_str()) {
-                            Some(value) => println!("Value: {}", value),
-                            None => println!("Key not found: {}", request.key_str()),
-                        }
-                    },
-                }
+                let hash_table = hash_table.clone();
+                threads.execute(move || {
+                    process_request(request, hash_table).unwrap();
+                });
             },
             Err(e) => {
                 if e.to_string() == "Queue is empty" {
