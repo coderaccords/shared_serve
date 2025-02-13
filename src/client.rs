@@ -1,11 +1,11 @@
-mod lib;
-use lib::{Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
+use shared_serve::{Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
 use nix::sys::{mman, mman::ProtFlags, mman::MapFlags};
 use nix::fcntl::OFlag;
 use nix::sys::stat::Mode;
 use std::error::Error;
 use std::mem::size_of;
 use std::num::NonZero;
+use std::io::{self, Write};
 
 fn setup_shared_memory_client() -> Result<*mut u8, Box<dyn Error>> {
     let shm_fd = mman::shm_open(
@@ -78,17 +78,53 @@ fn add_request(ptr: *mut u8, request: Request) -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let ptr = setup_shared_memory_client()?;
-    let request1 = Request::new(Operation::INSERT, "test_key", "test_value");
-    let request2 = Request::new(Operation::INSERT, "test_key2", "test_value2");
-    let request3 = Request::new(Operation::INSERT, "test_key3", "test_value3");
 
-    println!("Client: Adding requests");
-    add_request(ptr, request1)?;
-    add_request(ptr, request2)?;
-    add_request(ptr, request3)?;
-
-    let request1 = Request::new(Operation::GET, "test_key", "Dummy value");
-    add_request(ptr, request1)?;
-
+    loop {
+        println!("\nAvailable operations:");
+        println!("1. INSERT");
+        println!("2. GET");
+        println!("3. DELETE");
+        println!("4. Exit");
+        
+        print!("Enter operation number: ");
+        io::stdout().flush()?;
+        
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        
+        let operation = match input.trim() {
+            "1" => Operation::INSERT,
+            "2" => Operation::GET,
+            "3" => Operation::DELETE,
+            "4" => break,
+            _ => {
+                println!("Invalid operation! Please try again.");
+                continue;
+            }
+        };
+        
+        print!("Enter key: ");
+        io::stdout().flush()?;
+        let mut key = String::new();
+        io::stdin().read_line(&mut key)?;
+        let key = key.trim();
+        
+        let value = if operation == Operation::INSERT {
+            print!("Enter value: ");
+            io::stdout().flush()?;
+            let mut value = String::new();
+            io::stdin().read_line(&mut value)?;
+            value.trim().to_string()
+        } else {
+            "".to_string()
+        };
+        
+        let request = Request::new(operation, key, &value);
+        match add_request(ptr, request) {
+            Ok(_) => println!("Request added successfully!"),
+            Err(e) => println!("Failed to add request: {}", e),
+        }
+        print!("================================================");
+    }   
     Ok(())
 }

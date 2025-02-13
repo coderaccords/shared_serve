@@ -1,5 +1,4 @@
-mod lib;
-use lib::{HashTable, Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
+use shared_serve::{HashTable, Operation, Request, Header, SHARED_MEMORY_SIZE, CAPACITY};
 use clap::Parser;
 use nix::sys::{mman, mman::ProtFlags, mman::MapFlags};
 use nix::fcntl:: OFlag;
@@ -11,7 +10,7 @@ use std::num::NonZero;
 use std::os::fd::AsFd;
 use std::ptr;
 use threadpool::ThreadPool;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Parser)]
 struct Args {

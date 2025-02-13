@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::collections::LinkedList;
 use std::sync::{RwLock, Arc};
 use std::fmt;
@@ -21,7 +22,7 @@ pub const CAPACITY: usize = 10;
 pub const SHARED_MEMORY_SIZE: usize = std::mem::size_of::<Header>() + std::mem::size_of::<Request>() * CAPACITY;
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Operation {
     GET = 0,
     INSERT = 1,
