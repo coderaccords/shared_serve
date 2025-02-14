@@ -21,8 +21,8 @@ struct Args {
 }
 
 pub fn setup_shared_memory_server() -> Result<*mut u8, Box<dyn Error>> {
-    // unlink the shared memory object
-    mman::shm_unlink("RequestQueue")?;
+    // Try to unlink any existing shared memory object, ignore if it doesn't exist
+    let _ = mman::shm_unlink("RequestQueue");
 
     // Create the shared memory object
     let shm_fd = mman::shm_open(

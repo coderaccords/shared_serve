@@ -76,9 +76,7 @@ fn add_request(ptr: *mut u8, request: Request) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let ptr = setup_shared_memory_client()?;
-
+fn process_interactive_mode(ptr: *mut u8) -> Result<(), Box<dyn Error>> {
     loop {
         println!("\nAvailable operations:");
         println!("1. INSERT");
@@ -124,7 +122,87 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(_) => println!("Request added successfully!"),
             Err(e) => println!("Failed to add request: {}", e),
         }
-        print!("================================================");
-    }   
+        println!("================================================================");
+    }
+    Ok(())
+}
+
+fn process_stress_test_mode(ptr: *mut u8) -> Result<(), Box<dyn Error>> {
+    println!("Entering stress test mode. Format: <operation> <key> [value]");
+    println!("Operations: INSERT, GET, DELETE");
+    println!("Example: INSERT mykey myvalue");
+    println!("Example: GET mykey");
+    println!("Enter 'exit' to quit");
+
+    loop {
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        let input = input.trim();
+
+        if input.eq_ignore_ascii_case("exit") {
+            break;
+        }
+
+        let parts: Vec<&str> = input.split_whitespace().collect();
+        if parts.is_empty() {
+            continue;
+        }
+
+        let operation = match parts[0].to_uppercase().as_str() {
+            "INSERT" => {
+                if parts.len() != 3 {
+                    println!("INSERT requires key and value");
+                    continue;
+                }
+                Operation::INSERT
+            },
+            "GET" => {
+                if parts.len() != 2 {
+                    println!("GET requires key");
+                    continue;
+                }
+                Operation::GET
+            },
+            "DELETE" => {
+                if parts.len() != 2 {
+                    println!("DELETE requires key");
+                    continue;
+                }
+                Operation::DELETE
+            },
+            _ => {
+                println!("Invalid operation: {}", parts[0]);
+                continue;
+            }
+        };
+
+        let key = parts[1];
+        let value = if operation == Operation::INSERT {
+            parts[2].to_string()
+        } else {
+            "".to_string()
+        };
+
+        let request = Request::new(operation, key, &value);
+        match add_request(ptr, request) {
+            Ok(_) => println!("Request added successfully!"),
+            Err(e) => println!("Failed to add request: {}", e),
+        }
+    }
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let args: Vec<String> = std::env::args().collect();
+    let stress_test_mode = args.len() > 1 && args[1] == "--stress-test";
+
+    let ptr = setup_shared_memory_client()?;
+    
+    if stress_test_mode {
+        process_stress_test_mode(ptr)?;
+    } else {
+        process_interactive_mode(ptr)?;
+    }
+    
     Ok(())
 }
