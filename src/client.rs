@@ -12,7 +12,7 @@ fn setup_shared_memory_client() -> Result<*mut u8, Box<dyn Error>> {
         "RequestQueue",
         OFlag::O_RDWR,
         Mode::empty(),
-    )?;
+    ).map_err(|e| format!("{}: Make sure the server is running", e))?;
 
     let ptr = unsafe { 
         mman::mmap(

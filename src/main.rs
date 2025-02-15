@@ -118,7 +118,7 @@ pub fn process_request(request: Request, hash_table: Arc<HashTable>) -> Result<(
 }
 
 fn cleanup(ptr: *mut u8) {
-    println!("\nCleaning up...");
+    println!("Cleaning up...");
     unsafe {
         // Unmap the shared memory
         if let Err(e) = mman::munmap(
@@ -158,6 +158,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         
         if shutdown_rx.try_recv().is_ok() {
             println!("Shutdown signal received.");
+            threads.join();
             break;
         }
         
