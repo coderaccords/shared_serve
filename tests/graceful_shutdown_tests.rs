@@ -1,24 +1,23 @@
 use std::thread;
 use std::time::Duration;
 use std::path::Path;
-use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
+
 mod common;
 
 #[test]
 fn test_graceful_shutdown() {
     println!("Starting server");
-    let server = common::start_server();
-    thread::sleep(Duration::from_secs(2)); // Allow server to initialize
+    let mut server = common::start_server();
+    thread::sleep(Duration::from_secs(2));
 
     println!("Starting client");
     let mut client = common::start_client();
-    thread::sleep(Duration::from_secs(1)); // Allow client to connect
+    thread::sleep(Duration::from_secs(1));
 
     println!("Sending shutdown signal (SIGINT)");
-    signal::kill(Pid::from_raw(server.id() as i32), Signal::SIGINT)
-        .expect("Failed to send SIGINT to server");
-    thread::sleep(Duration::from_secs(2)); // Allow server to perform cleanup
+    common::stop_server_with_sigint(&server);
+    server.wait().expect("Failed to wait for server to exit");
+    thread::sleep(Duration::from_secs(2));
 
     println!("Checking if shared memory exists");
     let shm_path = "/dev/shm/RequestQueue";
