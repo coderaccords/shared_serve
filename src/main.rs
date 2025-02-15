@@ -10,7 +10,8 @@ use std::num::NonZero;
 use std::os::fd::AsFd;
 use std::ptr;
 use threadpool::ThreadPool;
-use std::sync::Arc;
+use std::sync::{Arc, mpsc::channel};
+use ctrlc;
 
 #[derive(Parser)]
 struct Args {
@@ -21,9 +22,6 @@ struct Args {
 }
 
 pub fn setup_shared_memory_server() -> Result<*mut u8, Box<dyn Error>> {
-    // Try to unlink any existing shared memory object, ignore if it doesn't exist
-    let _ = mman::shm_unlink("RequestQueue");
-
     // Create the shared memory object
     let shm_fd = mman::shm_open(
         "RequestQueue", 
@@ -84,7 +82,7 @@ pub fn get_request(ptr: *mut u8) -> Result<Request, Box<dyn Error>> {
             // Update read index
             *read_index_guard = (read_index + 1) % CAPACITY;
 
-            println!("Server: Inserted request at position {} - {}", *write_guard, request);
+            println!("Server: Received request at position {} - {}", *write_guard, request);
             return Ok(request);
         }
     }
@@ -103,7 +101,7 @@ pub fn process_request(request: Request, hash_table: Arc<HashTable>) -> Result<(
             let result = hash_table.delete(request.key_str());
             if result {
                 println!("Key deleted successfully");
-            } else {
+            } else {    
                 println!("Key not found: {}", request.key_str());
             }
         },
@@ -111,11 +109,30 @@ pub fn process_request(request: Request, hash_table: Arc<HashTable>) -> Result<(
             println!("Getting key: {}", request.key_str());
             match hash_table.get(request.key_str()) {
                 Some(value) => println!("Value: {}", value),
-                None => println!("Key not found: {}", request.key_str()),
+                None => println!("Key not found:    // let ptr_arc = Arc::new(Mutex::new(SafePtr(ptr)));
+ {}", request.key_str()),
             }
         },
     }
     Ok(())
+}
+
+fn cleanup(ptr: *mut u8) {
+    println!("\nCleaning up...");
+    unsafe {
+        // Unmap the shared memory
+        if let Err(e) = mman::munmap(
+            std::ptr::NonNull::new(ptr as *mut _).unwrap(),
+            SHARED_MEMORY_SIZE
+        ) {
+            eprintln!("Error unmapping shared memory: {}", e);
+        }
+    }
+    // Unlink the shared memory object
+    if let Err(e) = mman::shm_unlink("RequestQueue") {
+        eprintln!("Error unlinking shared memory: {}", e);
+    }
+    println!("Cleanup complete. Exiting.");
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -124,27 +141,49 @@ fn main() -> Result<(), Box<dyn Error>> {
     let thread_count = args.num_threads;
 
     let hash_table = Arc::new(HashTable::new(hash_table_size));
-    let ptr = setup_shared_memory_server()?;
+    let ptr = setup_shared_memory_server().expect("Failed to set up shared memory");
+
+    
 
     let threads = ThreadPool::new(thread_count);
+
+    let (shutdown_tx, shutdown_rx) = channel();
+
+    ctrlc::set_handler(move || shutdown_tx.send(()).expect("Could not send signal on channel."))
+        .expect("Error setting Ctrl-C handler");
 
     println!("Server started with {} threads. Waiting for requests...", thread_count);
     
     loop {
+        
+        if shutdown_rx.try_recv().is_ok() {
+            println!("Shutdown signal received.");
+            break;
+        }
+        
         match get_request(ptr) {
             Ok(request) => {
                 let hash_table = hash_table.clone();
                 threads.execute(move || {
-                    process_request(request, hash_table).unwrap();
+                    if let Err(e) = process_request(request, hash_table) {
+                        eprintln!("Error processing request: {}", e);
+                    }
                 });
             },
             Err(e) => {
-                if e.to_string() == "Queue is empty" {
+                if e.to_string() == "Server: Queue is empty" {
                     std::thread::sleep(std::time::Duration::from_millis(100));
                     continue;
                 }
-                // eprintln!("Error: {}", e);
+                else {
+                    eprintln!("Error: {}", e);
+                }
             }
         }
     }
+
+    
+    cleanup(ptr);
+
+    Ok(())
 }
