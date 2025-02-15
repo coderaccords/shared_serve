@@ -24,33 +24,14 @@ fn test_fault_tolerance_on_client_crash() {
 
     if let Some(mut new_client_stdin) = new_client.stdin.as_mut() {
         writeln!(new_client_stdin, "INSERT new_key new_value").unwrap();
-        new_client_stdin.flush().expect("Failed to flush stdin");
         writeln!(new_client_stdin, "exit").unwrap();
         new_client_stdin.flush().expect("Failed to flush stdin");
     }
 
     thread::sleep(Duration::from_secs(2));
 
-    let stdout = server.stdout.take().unwrap();
-    let mut bufread = BufReader::new(stdout);
-    let mut buf = String::new();
-    let mut found_insertion = false;
+    common::check_server_output(server.stdout.take().unwrap(), vec!["Inserting key: new_key"], Duration::from_secs(10));
 
-    while let Ok(n) = bufread.read_line(&mut buf) {
-        if n > 0 {
-            println!("Line: {}", buf.trim());
-            if buf.contains("Inserting key: new_key") {
-                found_insertion = true;
-                break;
-            }
-            buf.clear();
-        } else {
-            break;
-        }
-    }
-
-    
-    assert!(found_insertion, "Insertion not found in server output");
     // Cleanup
     new_client.wait().expect("Failed to kill new client");
     common::stop_server_with_sigint(&server);

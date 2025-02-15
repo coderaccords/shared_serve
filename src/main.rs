@@ -136,6 +136,10 @@ fn cleanup(ptr: *mut u8) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    
+    std::panic::set_hook(Box::new(|_| {
+    }));
+
     let args = Args::parse();
     let hash_table_size = args.size;
     let thread_count = args.num_threads;
