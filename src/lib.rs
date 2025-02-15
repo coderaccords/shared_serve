@@ -197,3 +197,40 @@ fn test_hash_table_insert() {
     assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
 }
 
+use std::thread;
+
+#[test]
+fn concurrent_insert_and_get() {
+    let hash_table = Arc::new(HashTable::new(10));
+    let mut handles = vec![];
+
+    for i in 0..10 {
+        let table = Arc::clone(&hash_table);
+        handles.push(thread::spawn(move || {
+            let key = format!("key{}", i);
+            let value = format!("value{}", i);
+            table.insert(&key, &value);
+            assert_eq!(table.get(&key).unwrap(), value);
+        }));
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+#[test]
+fn concurrent_delete() {
+    let hash_table = Arc::new(HashTable::new(10));
+    hash_table.insert("key1", "value1");
+    hash_table.insert("key2", "value2");
+
+    let table = Arc::clone(&hash_table);
+    let handle = thread::spawn(move || {
+        assert!(table.delete("key1"));
+        assert!(table.get("key1").is_none());
+    });
+
+    handle.join().unwrap();
+    assert!(hash_table.get("key2").is_some());
+}
