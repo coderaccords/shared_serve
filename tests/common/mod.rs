@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::process::{Command, Child, Stdio};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;

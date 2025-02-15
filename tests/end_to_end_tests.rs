@@ -1,4 +1,3 @@
-use std::process::{Child, ChildStdout, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 use std::io::Write;
@@ -13,7 +12,7 @@ fn test_end_to_end_request_handling() {
     let mut client = common::start_client();
     thread::sleep(Duration::from_secs(1));
 
-    if let Some(mut client_stdin) = client.stdin.as_mut() {
+    if let Some(client_stdin) = client.stdin.as_mut() {
         writeln!(client_stdin, "INSERT test_key test_value").unwrap();
         writeln!(client_stdin, "GET test_key").unwrap();
         writeln!(client_stdin, "DELETE test_key").unwrap();

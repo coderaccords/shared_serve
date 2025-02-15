@@ -1,8 +1,6 @@
 use std::thread;
 use std::time::Duration;
 use std::io::Write;
-use std::io::BufReader;
-use std::io::BufRead;
 mod common;
 
 #[test]
@@ -22,7 +20,7 @@ fn test_fault_tolerance_on_client_crash() {
     let mut new_client = common::start_client();
     thread::sleep(Duration::from_secs(1));
 
-    if let Some(mut new_client_stdin) = new_client.stdin.as_mut() {
+    if let Some(new_client_stdin) = new_client.stdin.as_mut() {
         writeln!(new_client_stdin, "INSERT new_key new_value").unwrap();
         writeln!(new_client_stdin, "exit").unwrap();
         new_client_stdin.flush().expect("Failed to flush stdin");
