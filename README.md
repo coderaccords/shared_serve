@@ -5,7 +5,7 @@ A multi-threaded server which uses shared memory for communication with clients.
 - [src](src): Source code for the project
   - [main.rs](src/main.rs): Defines the server implementation. This creates shared memory segment and starts waiting for client to enqueue requests.
   - [client.rs](src/client.rs): Defines the client implementation.
-  - [lib.rs](src/lib.rs): Defines the hash table [implementation](src/lib.rs#L100) and `Request` [data structure](src/lib.rs#L40).
+  - [lib.rs](src/lib.rs): Defines the hash table [implementation](src/lib.rs#L100) and `Request` [data structure implementation](src/lib.rs#L40).
 - [tests](tests): Integration tests for testing various scenarios. More details can be found in [Testing](#testing) section.
 - [Cargo.toml](Cargo.toml): Rust project configuration.
 
@@ -19,7 +19,7 @@ Server allows specifying following optional command line arguments:
 - `--size <size>`: Size of the hash table. **Default is 10.**
 - `--threads <num_threads>`: Number of threads to perform concurrent operations on the hash table. **Default is 4.**
 > [!WARNING]
-> The Requests support only 64 bytes of key and 256 bytes of value. Incase of larger values, the value will be truncated.
+> The `Request` [declaration](src/lib.rs#34) supports only 64 bytes of key and 256 bytes of value. In-case of larger values, the value will be truncated.
 
 ```bash
 cargo run --bin server -- --size <size> --threads <num_threads>
