@@ -118,7 +118,7 @@ pub fn process_request(request: Request, hash_table: Arc<HashTable>) -> Result<(
 }
 
 fn cleanup(ptr: *mut u8) {
-    println!("Cleaning up...");
+    eprintln!("Cleaning up...");
     unsafe {
         // Unmap the shared memory
         if let Err(e) = mman::munmap(
@@ -132,14 +132,11 @@ fn cleanup(ptr: *mut u8) {
     if let Err(e) = mman::shm_unlink("RequestQueue") {
         eprintln!("Error unlinking shared memory: {}", e);
     }
-    println!("Cleanup complete. Exiting.");
+    eprintln!("Cleanup complete. Exiting.");
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     
-    std::panic::set_hook(Box::new(|_| {
-    }));
-
     let args = Args::parse();
     let hash_table_size = args.size;
     let thread_count = args.num_threads;
@@ -161,7 +158,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     loop {
         
         if shutdown_rx.try_recv().is_ok() {
-            println!("Shutdown signal received.");
+            eprintln!("Shutdown signal received.");
             threads.join();
             break;
         }

@@ -28,10 +28,18 @@ fn test_fault_tolerance_on_client_crash() {
 
     thread::sleep(Duration::from_secs(2));
 
-    common::check_server_output(server.stdout.take().unwrap(), vec!["Inserting key: new_key"], Duration::from_secs(10));
+    // Store server's stdout before sending SIGINT
+    let server_output = server.stdout.take().unwrap();
 
+    common::check_server_output(server_output, vec!["Inserting key: new_key"], Duration::from_secs(10));
+
+    common::stop_server_with_sigint(&server);
+
+    match server.wait() {
+        Ok(_) => println!("Server exited gracefully"),
+        Err(e) => println!("Server did not exit gracefully: {}", e),
+    }
     // Cleanup
     new_client.wait().expect("Failed to kill new client");
-    common::stop_server_with_sigint(&server);
     server.wait().expect("Failed to wait for server to exit");
 } 
