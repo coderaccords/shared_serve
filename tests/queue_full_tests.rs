@@ -36,6 +36,7 @@ fn test_queue_full_handling() {
         let output = client.wait_with_output().expect("Failed to get client output");
         if String::from_utf8_lossy(&output.stdout).contains("Queue is full") {
             queue_full_count += 1;
+            println!("Client {} reported queue full", client_id);
         }
         client_id += 1;
     }
@@ -45,6 +46,10 @@ fn test_queue_full_handling() {
     signal::kill(Pid::from_raw(server.id() as i32), Signal::SIGCONT)
     .expect("Failed to send SIGCONT to server");
     println!("Server resumed");
+    thread::sleep(Duration::from_secs(1));
+
+    // Check that the server starts processing requests after resuming
+    common::check_server_output(server.stdout.take().unwrap(), vec!["Server: Received request at position"], Duration::from_secs(10));
 
     common::stop_server_with_sigint(&server);
     server.wait().expect("Failed to wait for server to exit");
