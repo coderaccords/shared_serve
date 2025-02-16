@@ -109,8 +109,7 @@ pub fn process_request(request: Request, hash_table: Arc<HashTable>) -> Result<(
             println!("Getting key: {}", request.key_str());
             match hash_table.get(request.key_str()) {
                 Some(value) => println!("Value: {}", value),
-                None => println!("Key not found:    // let ptr_arc = Arc::new(Mutex::new(SafePtr(ptr)));
- {}", request.key_str()),
+                None => println!("Key not found: {}", request.key_str()),
             }
         },
     }
@@ -154,9 +153,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("Error setting Ctrl-C handler");
 
     println!("Server started with {} threads. Waiting for requests...", thread_count);
-    
+    println!("=====================================================");
     loop {
-        
         if shutdown_rx.try_recv().is_ok() {
             eprintln!("Shutdown signal received.");
             threads.join();
@@ -170,6 +168,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     if let Err(e) = process_request(request, hash_table) {
                         eprintln!("Error processing request: {}", e);
                     }
+                    println!("=====================================================");
                 });
             },
             Err(e) => {

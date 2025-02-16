@@ -18,12 +18,15 @@ Make sure to have Rust installed. All the binaries present are tested with `Rust
 Server allows specifying following optional command line arguments:
 - `--size <size>`: Size of the hash table. **Default is 10.**
 - `--threads <num_threads>`: Number of threads to perform concurrent operations on the hash table. **Default is 4.**
+> [!WARNING]
+> The Requests support only 64 bytes of key and 256 bytes of value. Incase of larger values, the value will be truncated.
 
 ```bash
 cargo run --bin server -- --size <size> --threads <num_threads>
 ```
 > [!NOTE]
 > Server uses a [`CAPACITY` constant](src/lib.rs#L21) to determine the size of requests queue. Change this constant based on the needs.
+
 
 ### Running the client
 Client allows two modes of operation:

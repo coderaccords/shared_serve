@@ -54,16 +54,18 @@ impl Request {
 
     /// Returns the key as a &str, excluding any trailing null bytes.
     pub fn key_str(&self) -> &str {
-        Self::bytes_to_str(&self.key)
+        // Only convert first 64 bytes of the key
+        Self::bytes_to_str(&self.key[..64])
     }
 
     /// Returns the value as a &str, excluding any trailing null bytes.
     pub fn value_str(&self) -> &str {
-        Self::bytes_to_str(&self.value)
+        // Only convert first 256 bytes of the value
+        Self::bytes_to_str(&self.value[..256])
     }
 
-    /// Helper function to convert &[u8; N] to &str by finding the first \0
-    fn bytes_to_str<const N: usize>(bytes: &[u8; N]) -> &str {
+    /// Helper function to convert &[u8] to &str by finding the first \0
+    fn bytes_to_str(bytes: &[u8]) -> &str {
         if let Some(pos) = bytes.iter().position(|&c| c == 0) {
             // Safe to unwrap because we're slicing at a valid UTF-8 boundary
             std::str::from_utf8(&bytes[..pos]).unwrap_or("<invalid utf8>")
@@ -110,11 +112,11 @@ impl HashTable {
     }
 
     fn hash(&self, key: &str) -> usize {
-        let mut hash = 0;
+        let mut hash: u64 = 0;
         for c in key.chars() {
-            hash = hash * 31 + c as usize;
+            hash = ((hash % self.size as u64) * 31 + c as u64) % self.size as u64;
         }
-        hash % self.size
+        hash as usize
     }
 
     pub fn get_bucket(&self, key: &str) -> usize {
