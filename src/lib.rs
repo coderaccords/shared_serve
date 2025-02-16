@@ -174,7 +174,7 @@ impl HashTable {
 // Unit tests for the hash table
 #[test]
 fn test_hash_table() {
-    let mut hash_table = HashTable::new(10);
+    let hash_table = HashTable::new(10);
     hash_table.insert("key1", "value1");
     hash_table.insert("key2", "value2");
     hash_table.insert("key1", "value3");
@@ -184,7 +184,7 @@ fn test_hash_table() {
 
 #[test]
 fn test_hash_table_delete() {
-    let mut hash_table = HashTable::new(10);
+    let hash_table = HashTable::new(10);
     hash_table.insert("key1", "value1");
     hash_table.delete("key1");
     assert_eq!(hash_table.get("key1"), None);
@@ -192,12 +192,11 @@ fn test_hash_table_delete() {
 
 #[test]
 fn test_hash_table_insert() {
-    let mut hash_table = HashTable::new(10);
+    let hash_table = HashTable::new(10);
     hash_table.insert("key1", "value1");
     assert_eq!(hash_table.get("key1").unwrap().as_str(), "value1");
 }
 
-use std::thread;
 
 #[test]
 fn concurrent_insert_and_get() {
@@ -206,7 +205,7 @@ fn concurrent_insert_and_get() {
 
     for i in 0..10 {
         let table = Arc::clone(&hash_table);
-        handles.push(thread::spawn(move || {
+        handles.push(std::thread::spawn(move || {
             let key = format!("key{}", i);
             let value = format!("value{}", i);
             table.insert(&key, &value);
@@ -226,7 +225,7 @@ fn concurrent_delete() {
     hash_table.insert("key2", "value2");
 
     let table = Arc::clone(&hash_table);
-    let handle = thread::spawn(move || {
+    let handle = std::thread::spawn(move || {
         assert!(table.delete("key1"));
         assert!(table.get("key1").is_none());
     });
