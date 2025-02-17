@@ -1,5 +1,5 @@
 # shared_serve
-A multi-threaded server which uses **shared memory** for communication with clients. The server manages a hash table in shared memory. Clients can enqueue requests to the server for operations on the hash table. A dead-lock free algorithm is used to manage access to the shared memory. Complentary [integration tests](tests) are provided to test the server functionality.
+A multi-threaded server which uses **shared memory** for communication with clients. The server manages a hash table in shared memory. Clients can enqueue requests to the server for operations on the hash table. A dead-lock free algorithm is used to manage access to the shared memory. Complimentary [integration tests](tests) are provided to test the server functionality.
 
 ## Directory Structure
 - [src](src): Source code for the project
@@ -17,12 +17,12 @@ Make sure to have Rust installed. All the binaries present are tested with `Rust
 ### Running the server
 Server allows specifying following optional command line arguments:
 - `--size <size>`: Size of the hash table. **Default is 10.**
-- `--threads <num_threads>`: Number of threads to perform concurrent operations on the hash table. **Default is 4.**
+- `--num_threads <num_threads>`: Number of threads to perform concurrent operations on the hash table. **Default is 4.**
 > [!WARNING]
 > The `Request` [declaration](src/lib.rs#L34) supports only 64 bytes of key and 256 bytes of value. In-case of larger values, the value will be truncated.
 
 ```bash
-cargo run --bin server -- --size <size> --threads <num_threads>
+cargo run --bin server -- --size <size> --tnum_threads <num_threads>
 ```
 > [!NOTE]
 > Server uses a [`CAPACITY` constant](src/lib.rs#L21) to determine the size of requests queue. Change this constant based on the needs.
